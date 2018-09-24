@@ -1,0 +1,344 @@
+---
+title: "Project 1"
+author: "Tianyou Luo"
+date: "September 23, 2018"
+output: html_document
+---
+
+#First dataset: `Seatbelts`
+
+The `Seatbelts` data gives some variables about monthly totals of car drivers and passengers injuries and fatalities during Jan 1969 and Dec 1984 in Great Britain. The variables include: `DriversKilled` which lists the number of drivers killed in car accidents every month; `drivers`, which is the number of drivers that were killed or seriously injured every month; `front` and `rear`, which is the number of front-seat and rear-seat passengers killed or seriously injured; `kms`, which is the distance driven, and `PetrolPrice`.
+
+First, according to the dataset description, compulsory wearing of seat belts was introduced on 31 Jan 1983. Therefore, I will be interested in whether this law was efficient in reducing the injuries and fatalities of passengers. Through calculation, the average number of casualties per month for drivers, front-seat passengers and rear-seat passengers are 1718, 873 and 400 respectively before the enforcement of seatbelt law. After the law was introduced, these numbers became 1322, 571 and 408.
+
+
+```{r,include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+data("Seatbelts")
+Seatbelt<-as_tibble(Seatbelts)
+Seatbelt%<>%
+  mutate(month=c(0:(nrow(.)-1))%%12+1, year=c(0:(nrow(.)-1))%/%12+1969)%>%
+  mutate(month=as.factor(month))%>%
+  mutate(law=as.factor(ifelse(law==0,"no","yes")))
+
+#summarise the data first
+Seatbelt%>%
+  group_by(law)%>%
+  summarise(avgdri=mean(drivers),avgfront=mean(front),avgrear=mean(rear))
+
+```
+
+
+<center>
+```{r,echo=FALSE}
+#transform the dataset to compare accident before and after law
+Seatbeltdriver<-Seatbelt%>%
+  select(-front,-rear)%>%
+  rename(injury=drivers)%>%
+  mutate(injtyp="drivers")
+
+Seatbeltfront<-Seatbelt%>%
+  select(-drivers,-rear)%>%
+  rename(injury=front)%>%
+  mutate(injtyp="front")
+
+Seatbeltrear<-Seatbelt%>%
+  select(-drivers,-front)%>%
+  rename(injury=rear)%>%
+  mutate(injtyp="rear")  
+
+Seatbeltlong<-rbind(Seatbeltdriver,Seatbeltfront,Seatbeltrear)
+
+ggplot(data=Seatbeltlong)+
+  geom_boxplot(aes(x=law,y=injury,color=injtyp))+
+  ylab("Injuries or fatalities")+
+  guides(color=guide_legend(title=NULL))
+```
+
+Fig. 1.1 Comparison of number of injuries before and after seatbelt law enforcement
+
+</center>
+
+The boxplot above shows that for drivers and front-seat passengers, the number of injuries and fatalities had a significant decrease after the law inplemented. However, for rear-seat passengers, the number of injuries remained almost the same. Since rear-seat passengers rarely fasten their seatbelt in practice, this could be a good evidence showing that fastening your seatbelt could significantly reduce the chance of getting seriously injured or even killed in a car accident.
+
+<center>
+```{r,echo=FALSE}
+#compare death rate before and after the law
+Seatbelt%>%
+  mutate(deathrate=DriversKilled/drivers)%>%
+  ggplot()+
+  geom_boxplot(aes(x=law,y=deathrate,group=law))
+```
+
+Fig. 1.2 Comparison of death rate of drivers before and after seatbelt law enforcement
+
+</center>
+
+Then I want to further look if the death rate of drivers in car accidents changed significantly due to the introduction of seatbelt law. However, according to the plot above, there is not significant difference of drivers' deathrate before and after the law. This leads to a surprising result that although fastening seatbelts can dramatically reduce the chance of getting seriously injured, it does not have much help to keep drivers alive if they are involved in an accident that is severe enough to get people seriously injured.
+
+Then I intend to use the information about `kms` to see if distance driven has some relation with car accidents. Since we already know that the introduction of seatbelt law has significant effect on casualty, only data before the introduction of law will be used.
+
+<center>
+```{r,echo=FALSE,message=FALSE}
+#the relationship between kms and drivers
+Seatbelt%>%
+  filter(law=="no")%>%
+  ggplot(aes(x=kms,y=drivers))+
+  geom_point()+
+  geom_smooth()
+```
+
+Fig. 1.3 Number of injuries and deaths of drivers vs total distance driven
+
+</center> 
+
+Figure 1.3 shows that the number of serious car accidents actually does not have a strong correlation with the total distance driven. The number of accidents even slightly decreased as `kms` grows larger. This could be a pretty surprising result for some people.
+
+<center>
+```{r,echo=FALSE}
+#relationship between month(Season) and accident
+Seatbeltlong%>%
+  filter(law=="no")%>%
+  ggplot()+
+  geom_boxplot(aes(x=month,y=injury,color=injtyp))+
+  ylab("Injuries or fatalities")+
+  guides(color=guide_legend(title=NULL))
+```
+
+Fig. 1.4 Number of injuries and deaths vs month
+
+</center> 
+
+I further examined if the number of severe car accidents are correlated with the month or season. Figure 1.4 shows that the number of drivers injured is significantly higher in the fourth quarter, while the number of rear-seat passengers injured seems to be higher during summertime. The number of front-seat passengeres injured remains relatively steady throughout the year. 
+
+<center>
+```{r,echo=FALSE}
+#year and month
+Seatbelt%>%
+  filter(law=="no")%>%
+  ggplot()+
+  geom_tile(aes(x=month,y=year,fill=drivers))+
+  scale_fill_gradient(low="red",high="black")
+```
+
+Fig. 1.5 Number of injuries and deaths for each month and each year
+
+</center>
+
+To further examine the distribution of drivers' casualty across months and years, Figure 1.5 was plotted. It could be seen clearly that October-December see a higher number of car accidents, and as time moves on (`years` grows larger), the number of casualties is in a decrease.
+
+As a next step, it could be interesting to consider what caused the different pattern of injuries across months for drivers, front-seat and rear-seat passengers.
+
+#Second dataset: `airquality`
+
+```{r,include=FALSE}
+data("airquality")
+airq<-as_tibble(airquality)
+airq%<>%
+  mutate(Month=as.factor(Month),Day=as.factor(Day))%>%
+  mutate(weekday=as.factor((c(1:nrow(.))%%7)+1))
+```
+
+The `airquality` data contains daily air quality measurements in New York from May 1st to September 30th 1973. The variables measured include ozone level, solar radiation, wind speed and temperature.
+
+Figure 2.1 shows the distribution of these four variables. We can see that `Solar.R`, `Wind` and `Temp` all have a unimodal distribution, while the distribution of `Ozone` is more like a geometric distribution.
+
+<center>
+```{r,echo=FALSE}
+#initial exploration: histogram
+ghozone<-ggplot(data=airq)+
+  geom_histogram(aes(x=Ozone),na.rm=TRUE,binwidth=10)
+ghsolar<-ggplot(data=airq)+
+  geom_histogram(aes(x=Solar.R),na.rm=TRUE,binwidth=30)
+ghwind<-ggplot(data=airq)+
+  geom_histogram(aes(x=Wind),na.rm=TRUE,binwidth=2)
+ghtemp<-ggplot(data=airq)+
+  geom_histogram(aes(x=Temp),na.rm=TRUE,binwidth=4)
+library(grid)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow=2,ncol=2)))
+print(ghozone,vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(ghsolar,vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(ghwind,vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(ghtemp,vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+```
+
+Fig. 2.1 Histogram of variables in airquality dataset
+
+</center>
+
+<center> 
+```{r,echo=FALSE}
+#initial exploration: scatter plot
+gpozone<-ggplot(data=airq,aes(x=c(1:nrow(airq))))+
+  geom_point(aes(y=Ozone),na.rm=TRUE)+
+  xlab("")
+gpsolar<-ggplot(data=airq,aes(x=c(1:nrow(airq))))+
+  geom_point(aes(y=Solar.R),na.rm=TRUE)+
+  xlab("")
+gpwind<-ggplot(data=airq,aes(x=c(1:nrow(airq))))+
+  geom_point(aes(y=Wind),na.rm=TRUE)+
+  xlab("Date")
+gptemp<-ggplot(data=airq,aes(x=c(1:nrow(airq))))+
+  geom_point(aes(y=Temp),na.rm=TRUE)+
+  xlab("Date")
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow=2,ncol=2)))
+print(gpozone,vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(gpsolar,vp=viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(gpwind,vp=viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(gptemp,vp=viewport(layout.pos.row = 2, layout.pos.col = 2))
+```
+
+Fig. 2.2 Scatterplot of variables in airquality dataset
+
+</center>
+
+Figure 2.2 shows the scatterplot of these four variables versus the number of days since May 1st 1973. We could see that the solar radiation and wind speed seems to be evenly distributed throughtout these days, while ozone level and temperature seem to be higher in the middle. It is reasonable to see higher temperature in summer days, but we could also be interested in whether there is a correlation between `Ozone` and `Temp`.
+
+<center>
+```{r,echo=FALSE}
+#relationship between ozone and temperature
+airq%>%
+  filter(!is.na(Ozone))%>%
+  ggplot()+
+  geom_boxplot(aes(x=cut_width(Temp,5),y=Ozone))
+```
+
+Fig. 2.3 Correlation between ozone level and temperature
+
+</center>
+
+Figure 2.3 shows that ozone level remains almost stable when temperature is lower than 77 degrees, but increases significantly as temperature grows higher.
+
+<center>
+```{r,echo=FALSE}
+#ozone level condition on weekday and temperature
+airq%>%
+  filter(!is.na(Ozone))%>%
+  mutate(tempinterval=cut_width(Temp,4))%>%
+  group_by(weekday,tempinterval)%>%
+  summarise(meanozone=mean(Ozone))%>%
+  ggplot()+
+  geom_tile(aes(x=weekday,y=tempinterval,fill=meanozone))+
+  ylab("temperature")+
+  guides(fill=guide_legend(title="average ozone"))+
+  scale_fill_gradient(low="red",high="black")
+```
+
+Fig. 2.4 Average ozone level based on temperature and days of the week
+
+</center>
+
+Figure 2.4 further shows the ozone level conditioned on temperature and days of the week. We can see that higher temperature sees higher ozone level, while days of the week do not seem to play an important part in ozone level.
+
+
+#Third dataset: `state.x77`
+
+```{r,include=FALSE}
+data("state.x77")
+state<-as_tibble(state.x77)
+state<-mutate(state,abb=state.abb,division=state.division)
+```
+
+The third dataset was obtained combining the `state.abb`, `state.division` and `state.x77` dataset. It contains the information of population, per capita income, illiteracy, life expectation, murder rate, percent of high school graduates, area and the division it belongs to for the 50 US states. The data were collected in early 1970s.
+
+<center>
+```{r,echo=FALSE,message=FALSE}
+#relationship between illiteracy and high school graduates
+statesum<-summarise(state,avgilliteracy=mean(Illiteracy),
+                    avgHS=mean(`HS Grad`),avgmurder=mean(Murder))
+ggplot(data=state,aes(x=`HS Grad`,y=Illiteracy))+
+  geom_point(aes(color=division),size=3)+
+  geom_smooth()+
+  geom_hline(aes(yintercept=statesum$avgilliteracy),color="red",linetype="dashed")+
+  geom_vline(aes(xintercept=statesum$avgHS),color="brown",linetype="dashed")
+```
+
+Fig. 3.1 Illiteracy versus percentage of high school graduates
+
+</center>
+
+Figure 3.1 shows the correlation between illiteracy and high school graduates percentage. We can see that as the percentage of high school graduates grows larger, the illiteracy rate gradually decreases. The average illiteracy(shown in the graph as the horizontal dashed line) across US in 1970 was 1.17, and the average percentage of high school graduates(shown in the graph as the vertical dashed line) was 53.1.
+
+<center>
+```{r,echo=FALSE,message=FALSE}
+#relationship between murder and illiteracy
+ggplot(data=state,aes(x=Illiteracy,y=Murder))+
+  geom_point(aes(color=division),size=3)+
+  geom_smooth(se=FALSE)+
+  geom_hline(aes(yintercept=statesum$avgmurder),color="red",linetype="dashed")
+```
+
+Fig. 3.2 Illiteracy versus murder rate
+
+</center>
+
+Figure 3.2 shows the correlation between illiteracy and murder rate. The average murder rate across the nation is 7.38 per 100,000 population. We can see that as illiteracy grows larger, murder rate also increases, showing a positive correlation between these two. States in New England and west north central area have lower illiteracy as well as murder rate, while states in west south central and east south central area seem to have a higher illiteracy and murder rate. The relationship between murder rate, illiteracy and percentage of high school graduates can be further shown in Figure 3.3.
+
+<center>
+```{r,echo=FALSE}
+#murder, illiteracy and HS
+ggplot(data=state,aes(x=Illiteracy,y=`HS Grad`))+
+  geom_point(aes(color=Murder),size=4)+
+  scale_color_gradient(low="green",high="black")
+```
+
+Fig. 3.3 Relationship between illiteracy, murder rate and high school graduates percentage
+
+</center>
+
+Figure 3.4 shows that lower illiteracy, higher income and higher life expectation usually come together. Next step, I would be interested in looking at the distribution of income, illiteracy and life expectancy within each state.
+
+<center>
+```{r,echo=FALSE}
+#life expectancy, illiteracy and income
+ggplot(data=state,aes(x=Illiteracy,y=Income))+
+  geom_point(aes(color=`Life Exp`),size=4)+
+  scale_color_gradient(low="blue",high="green")
+```
+
+Fig. 3.4 Relationship between illiteracy, life expectancy and income
+
+</center>
+
+
+#Fourth dataset: `USAccDeaths`
+
+This dataset describes the monthly totals of accidental deaths in the USA from 1973 to 1978. The following table shows the average number of monthly accidental deaths in each year.
+
+```{r,echo=FALSE}
+data("USAccDeaths")
+usaccdea<-as_tibble(USAccDeaths)
+usaccdea<-usaccdea%>%
+  mutate(year=as.factor(c(0:(nrow(.)-1))%/%12+1973),month=as.factor(c(0:(nrow(.)-1))%%12+1))%>%
+  mutate(x=as.integer(x))
+```
+
+
+```{r,echo=FALSE}
+library(knitr)
+library(kableExtra)
+usaccdea%>%
+  group_by(year)%>%
+  summarise(avgaccdeath=round(mean(x),2))%>%
+  kable(col.names=c("year","average accidental deaths"))%>%
+  kable_styling(full_width=F)
+```
+
+<center>
+```{r,echo=FALSE}
+ggplot(data=usaccdea)+
+  geom_tile(aes(x=month,y=year,fill=x))+
+  scale_fill_gradient(low="red",high="black")
+```
+
+Fig. 4.1 Accidental deaths number for each month and each year
+
+</center>
+
+Figure 4.1 shows that the number of accidental deaths is the highest in the summer, while lower in February. The safety condition seem to remain stable across years without much improvement.
+
+As a next step, I will be interested in looking at the data for subsequent years to see if there is a decrease in number of accidental deaths.
