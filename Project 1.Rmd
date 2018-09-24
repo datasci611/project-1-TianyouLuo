@@ -5,6 +5,16 @@ date: "September 23, 2018"
 output: html_document
 ---
 
+```{r,include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(magrittr)
+library(grid)
+library(knitr)
+library(kableExtra)
+```
+
+
 #First dataset: `Seatbelts`
 
 The `Seatbelts` data gives some variables about monthly totals of car drivers and passengers injuries and fatalities during Jan 1969 and Dec 1984 in Great Britain. The variables include: `DriversKilled` which lists the number of drivers killed in car accidents every month; `drivers`, which is the number of drivers that were killed or seriously injured every month; `front` and `rear`, which is the number of front-seat and rear-seat passengers killed or seriously injured; `kms`, which is the distance driven, and `PetrolPrice`.
@@ -13,9 +23,6 @@ First, according to the dataset description, compulsory wearing of seat belts wa
 
 
 ```{r,include=FALSE}
-library(tidyverse)
-library(dplyr)
-library(magrittr)
 data("Seatbelts")
 Seatbelt<-as_tibble(Seatbelts)
 Seatbelt%<>%
@@ -156,7 +163,6 @@ ghwind<-ggplot(data=airq)+
   geom_histogram(aes(x=Wind),na.rm=TRUE,binwidth=2)
 ghtemp<-ggplot(data=airq)+
   geom_histogram(aes(x=Temp),na.rm=TRUE,binwidth=4)
-library(grid)
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(nrow=2,ncol=2)))
 print(ghozone,vp=viewport(layout.pos.row = 1, layout.pos.col = 1))
@@ -319,8 +325,6 @@ usaccdea<-usaccdea%>%
 
 
 ```{r,echo=FALSE}
-library(knitr)
-library(kableExtra)
 usaccdea%>%
   group_by(year)%>%
   summarise(avgaccdeath=round(mean(x),2))%>%
